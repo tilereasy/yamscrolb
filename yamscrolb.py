@@ -2,7 +2,6 @@ from yandex_music import Client
 from yandex_music.utils.request import Request
 from pathlib import Path
 import pylast
-import dotenv
 
 import time
 import os
@@ -10,56 +9,6 @@ import sys
 
 SCROBBLE_COOLDOWN = 15
 FULLMODELSCOUNT = 2
-DOTENV_FILE = Path(".env")
-DOTENV_TEMPLATE = """# Ваш токен Яндекс Музыки
-TOKEN_YANDEX=
-# Токен приложения Last FM
-TOKEN_LASTFM=
-# Секретный токен приложения Last FM
-SECRET_LASTFM=
-# Ваш логин(юзернейм) Last FM
-LASTFM_LOGIN=
-# Ваш пароль от Last FM
-# Можно ввести либо в форме md5-хэша в соответствующее поле
-# ЛИБО сам пароль в нехэшированном виде в LASTFM_PASSWORD
-# ПРИЧЕМ достаточно заполнить лишь одно из этих полей
-# !! Рекомендую ввести именно хэш !!
-LASTFM_PASSWORD_HASH=
-LASTFM_PASSWORD=
-# Значение cookie из браузера где
-# вы авторизованы в Яндекс Музыке
-# Заполнять необязательно, но
-# при отсутствии будут наблюдаться проблемы со скробблингом
-COOKIE=
-"""
-
-def ensure_dotenv():
-    if not DOTENV_FILE.exists():
-        print("Файл .env не найден, создаю шаблон...")
-        DOTENV_FILE.write_text(DOTENV_TEMPLATE)
-        DOTENV_FILE.chmod(0o600)
-        print(f"Создан {DOTENV_FILE}, заполните его данными.")
-        sys.exit()
-
-def trouble_dotenv(data):
-    match data:
-        case "TOKEN_YANDEX":
-            print("Токен Яндекс Музыки не обнаружен!\n " \
-            "Он должен находиться в TOKEN_YANDEX в .env\n")
-        case "TOKEN_LASTFM":
-            print("Токен приложения Last FM не обнаружен!\n " \
-            "Он должен находиться в TOKEN_LASTFM в .env\n")
-        case "SECRET_LASTFM":
-            print("Secret приложения Last FM не обнаружен!\n " \
-            "Он должен находиться в SECRET_LASTFM в .env\n")
-        case "LASTFM_LOGIN":
-            print("Логин пользователя Last FM не обнаружен!\n " \
-            "Он должен находиться в LASTFM_LOGIN в .env\n")
-        case "PASSWORD":
-            print("Не обнаружено пароля пользователя Last FM. \n" \
-            "Он должен находиться в виде md5-хэша в LASTFM_LOGIN_HASH в .env \n" \
-            "Также он может находиться открыто в LASTFM_PASSWORD в .env\n")
-    sys.exit()
 
 def get_timestamp():
     return str(int(time.time()))
@@ -92,26 +41,20 @@ print(r" \______/                                                               
 print("")
 print("")
 
-ensure_dotenv()
+try:
+    user_data = {"TOKEN_YANDEX":os.environ.get("TOKEN_YANDEX"),
+                 "TOKEN_LASTFM":os.environ.get("TOKEN_LASTFM"),
+                 "SECRET_LASTFM":os.environ.get("SECRET_LASTFM"),
+                 "LASTFM_LOGIN": os.environ.get("LASTFM_LOGIN"),
+                 "LASTFM_PASSWORD_HASH":os.environ.get("LASTFM_PASSWORD_HASH"),
+                 "LASTFM_PASSWORD":os.environ.get("LASTFM_PASSWORD"),
+                 "COOKIE":os.environ.get("COOKIE")}
+except:
+    print("Ошибка при считывании данных из переменных окружения!")
+    sys.exit()
 
-dotenv.load_dotenv()
-if os.getenv("COOKIE") == None or os.getenv("COOKIE") == "":
-    print("Для более стабильной работы заполните COOKIE в .env!\n")
-
-if (os.getenv("LASTFM_PASSWORD_HASH"), os.getenv("LASTFM_PASSWORD")) != (None, None) and (os.getenv("LASTFM_PASSWORD_HASH"), os.getenv("LASTFM_PASSWORD")) != ("", ""):
-    user_data = {"TOKEN_YANDEX":os.getenv("TOKEN_YANDEX") if os.getenv("TOKEN_YANDEX")!=None 
-                and os.getenv("TOKEN_YANDEX")!="" else trouble_dotenv("TOKEN_YANDEX"),
-                    "TOKEN_LASTFM":os.getenv("TOKEN_LASTFM") if os.getenv("TOKEN_LASTFM")!=None
-                and os.getenv("TOKEN_LASTFM")!="" else trouble_dotenv("TOKEN_LASTFM"),
-                    "SECRET_LASTFM":os.getenv("SECRET_LASTFM") if os.getenv("SECRET_LASTFM")!=None
-                and os.getenv("SECRET_LASTFM") !="" else trouble_dotenv("SECRET_LASTFM"),
-                    "LASTFM_LOGIN":os.getenv("LASTFM_LOGIN") if os.getenv("LASTFM_LOGIN")!=None
-                and os.getenv("LASTFM_LOGIN")!="" else trouble_dotenv("LASTFM_LOGIN"),
-                    "LASTFM_PASSWORD": os.getenv("LASTFM_PASSWORD_HASH") if os.getenv("LASTFM_PASSWORD_HASH")!=None and
-                    os.getenv("LASTFM_PASSWORD_HASH")!="" else pylast.md5(os.getenv("LASTFM_PASSWORD")),
-                    "COOKIE":os.getenv("COOKIE")}
-else:
-    trouble_dotenv("PASSWORD")
+if user_data["LASTFM_PASSWORD"] == None:
+    user_data["LASTFM_PASSWORD"] = user_data["LASTFM_PASSWORD_HASH"]
 
 try:
     client = Client(user_data["TOKEN_YANDEX"])
