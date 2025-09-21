@@ -1,6 +1,5 @@
 from yandex_music import Client
 from yandex_music.utils.request import Request
-from pathlib import Path
 import pylast
 
 import time
@@ -9,6 +8,14 @@ import sys
 
 SCROBBLE_COOLDOWN = 15
 FULLMODELSCOUNT = 2
+
+def get_last_fm_password():
+    if os.environ.get("LASTFM_PASSWORD") != None:
+        return os.environ.get("LASTFM_PASSWORD")
+    elif os.environ.get("LASTFM_PASSWORD_HASH") != None:
+        return os.environ.get("LASTFM_PASSWORD_HASH")
+    else:
+        print("Отсутвствует пароль или хэш пароля Last FM!")
 
 def get_timestamp():
     return str(int(time.time()))
@@ -26,6 +33,7 @@ def scrobble(session, title, artists):
     session.scrobble(artists[0], title, timestamp=get_timestamp())
     print(f"{", ".join(artists)} — {title}")
 
+
 os.system("clear" if os.name=="posix" else "cls")
 print(r"                                                                          $$\ $$\       ")  
 print(r"                                                                          $$ |$$ |      ")   
@@ -41,20 +49,18 @@ print(r" \______/                                                               
 print("")
 print("")
 
-try:
-    user_data = {"TOKEN_YANDEX":os.environ.get("TOKEN_YANDEX"),
+user_data = {"TOKEN_YANDEX":os.environ.get("TOKEN_YANDEX"),
                  "TOKEN_LASTFM":os.environ.get("TOKEN_LASTFM"),
                  "SECRET_LASTFM":os.environ.get("SECRET_LASTFM"),
                  "LASTFM_LOGIN": os.environ.get("LASTFM_LOGIN"),
                  "LASTFM_PASSWORD_HASH":os.environ.get("LASTFM_PASSWORD_HASH"),
-                 "LASTFM_PASSWORD":os.environ.get("LASTFM_PASSWORD"),
+                 "LASTFM_PASSWORD":get_last_fm_password(),
                  "COOKIE":os.environ.get("COOKIE")}
-except:
-    print("Ошибка при считывании данных из переменных окружения!")
-    sys.exit()
 
-if user_data["LASTFM_PASSWORD"] == None:
-    user_data["LASTFM_PASSWORD"] = user_data["LASTFM_PASSWORD_HASH"]
+REQUIRED_ENV = ["TOKEN_YANDEX", "TOKEN_LASTFM", "SECRET_LASTFM", "LASTFM_LOGIN"]
+missing = [var for var in user_data if not user_data[var]]
+if missing:
+    print(f"Отсутствует {missing} в переменных окружения!")
 
 try:
     client = Client(user_data["TOKEN_YANDEX"])
