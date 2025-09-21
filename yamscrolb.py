@@ -10,12 +10,13 @@ SCROBBLE_COOLDOWN = 15
 FULLMODELSCOUNT = 2
 
 def get_last_fm_password():
-    if os.environ.get("LASTFM_PASSWORD") != None:
+    if os.environ.get("LASTFM_PASSWORD") != None and os.environ.get("LASTFM_PASSWORD") != "":
         return os.environ.get("LASTFM_PASSWORD")
-    elif os.environ.get("LASTFM_PASSWORD_HASH") != None:
+    elif os.environ.get("LASTFM_PASSWORD_HASH") != None and os.environ.get("LASTFM_PASSWORD_HASH") != "":
         return os.environ.get("LASTFM_PASSWORD_HASH")
     else:
         print("Отсутвствует пароль или хэш пароля Last FM!")
+        sys.exit()
 
 def get_timestamp():
     return str(int(time.time()))
@@ -68,6 +69,7 @@ try:
     print("Авторизован на Яндекс Музыке!")
 except:
     print("Ошибка при авторизации на Яндекс Музыке!")
+    sys.exit()
 
 
 try:
@@ -79,6 +81,7 @@ try:
     print("Авторизован на Last FM!\n")
 except:
     print("Ошибка при авторизации на Last FM!")
+    sys.exit()
 
 request = Request(client, {"Cookie":user_data["COOKIE"]})
 response = request.get(f"https://api.music.yandex.ru/music-history?fullModelsCount={FULLMODELSCOUNT}")
