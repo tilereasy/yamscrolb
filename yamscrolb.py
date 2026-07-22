@@ -30,9 +30,23 @@ def get_artists(response, number=0):
         artists.append(i["name"])
     return artists
 
+def format_track(title, artists):
+    return f"{', '.join(artists)} — {title}"
+
+def get_current_track(request):
+    try:
+        response = request.get(f"https://api.music.yandex.ru/music-history?fullModelsCount={FULLMODELSCOUNT}")
+        title = get_title(response)
+        artists = get_artists(response)
+        return title, artists, format_track(title, artists)
+    except Exception as error:
+        print(f"Не удалось получить историю Яндекс Музыки: {error}")
+        print("Проверьте COOKIE: для endpoint music-history требуется cookie авторизованного браузера.")
+        return None
+
 def scrobble(session, title, artists):
     session.scrobble(artists[0], title, timestamp=get_timestamp())
-    print(f"{", ".join(artists)} — {title}")
+    print(format_track(title, artists))
 
 
 os.system("clear" if os.name=="posix" else "cls")
@@ -58,10 +72,11 @@ user_data = {"TOKEN_YANDEX":os.environ.get("TOKEN_YANDEX"),
                  "LASTFM_PASSWORD":get_last_fm_password(),
                  "COOKIE":os.environ.get("COOKIE")}
 
-REQUIRED_ENV = ["TOKEN_YANDEX", "TOKEN_LASTFM", "SECRET_LASTFM", "LASTFM_LOGIN"]
-missing = [var for var in user_data if not user_data[var]]
+REQUIRED_ENV = ["TOKEN_YANDEX", "TOKEN_LASTFM", "SECRET_LASTFM", "LASTFM_LOGIN", "COOKIE"]
+missing = [var for var in REQUIRED_ENV if not user_data[var]]
 if missing:
     print(f"Отсутствует {missing} в переменных окружения!")
+    sys.exit()
 
 try:
     client = Client(user_data["TOKEN_YANDEX"])
@@ -83,18 +98,20 @@ except:
     print("Ошибка при авторизации на Last FM!")
     sys.exit()
 
-request = Request(client, {"Cookie":user_data["COOKIE"]})
-response = request.get(f"https://api.music.yandex.ru/music-history?fullModelsCount={FULLMODELSCOUNT}")
-last_track = f"{", ".join(get_artists(response))} — {get_title(response)}"
+request = Request(client, {"Cookie": user_data["COOKIE"]})
+last_track = None
 
 while True:
-    try:
-        response = request.get(f"https://api.music.yandex.ru/music-history?fullModelsCount={FULLMODELSCOUNT}")
-        current_track = f"{", ".join(get_artists(response))} — {get_title(response)}"
-        if current_track != last_track:
+    track = get_current_track(request)
+    if track:
+        title, artists, current_track = track
+        if last_track is None:
             last_track = current_track
-            scrobble(session, get_title(response), get_artists(response))
-    except:
-        print("Возникла проблема при скробблинге!")
+        elif current_track != last_track:
+            last_track = current_track
+            try:
+                scrobble(session, title, artists)
+            except Exception as error:
+                print(f"Возникла проблема при скробблинге: {error}")
     time.sleep(SCROBBLE_COOLDOWN)
 
